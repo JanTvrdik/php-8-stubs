@@ -121,32 +121,8 @@ $command = new class(
 			require_once __DIR__ . '/../Php8StubsMap.php';
 			$parts = explode('.', $updateFrom);
 			$map = new \PHPStan\Php8StubsMap((int) $parts[0] * 10000 + (int) ($parts[1] ?? 0) * 100 + (int) ($parts[2] ?? 0));
-			$classes = $map->classes;
-			$functions = $map->functions;
-			foreach ($addClasses as $className => $fileName) {
-				if (!array_key_exists($className, $classes)) {
-					continue;
-				}
-
-				if ($classes[$className] !== $fileName) {
-					$addClasses[$className] = $fileName;
-					continue;
-				}
-
-				unset($addClasses[$className]);
-			}
-			foreach ($addFunctions as $functionName => $fileName) {
-				if (!array_key_exists($functionName, $functions)) {
-					continue;
-				}
-
-				if ($functions[$functionName] !== $fileName) {
-					$addFunctions[$functionName] = $fileName;
-					continue;
-				}
-
-				unset($addFunctions[$functionName]);
-			}
+			$addClasses = array_diff_assoc($addClasses, $map->classes);
+			$addFunctions = array_diff_assoc($addFunctions, $map->functions);
 		}
 
 		// todo are there symbols missing at their original locations?
