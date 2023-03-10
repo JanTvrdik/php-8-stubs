@@ -117,8 +117,7 @@ $command = new class(
 
 		if ($isUpdate) {
 			require_once __DIR__ . '/../Php8StubsMap.php';
-			$parts = explode('.', $updateFrom);
-			$map = new \PHPStan\Php8StubsMap((int) $parts[0] * 10000 + (int) ($parts[1] ?? 0) * 100 + (int) ($parts[2] ?? 0));
+			$map = new \PHPStan\Php8StubsMap($this->parsePhpVersion($updateFrom));
 			$addClasses = array_diff_assoc($addClasses, $map->classes);
 			$addFunctions = array_diff_assoc($addFunctions, $map->functions);
 		}
@@ -320,8 +319,7 @@ $command = new class(
 	{
 		$oldStmts = [];
 		$newStmts = [];
-		$parts = explode('.', $updateFrom);
-		$phpVersionFrom = (int) $parts[0] * 10000 + (int) ($parts[1] ?? 0) * 100 + (int) ($parts[2] ?? 0);
+		$phpVersionFrom = $this->parsePhpVersion($updateFrom);
 		foreach ($stmts as $stmt) {
 			if (!isset($stmt->attrGroups)) {
 				$newStmts[] = $stmt;
@@ -348,20 +346,17 @@ $command = new class(
 				}
 			}
 
-			$sinceId = null;
 			if ($since !== null) {
-				$parts = explode('.', $since->args[0]->value->value);
-				$sinceId = (int) $parts[0] * 10000 + (int) ($parts[1] ?? 0) * 100 + (int) ($parts[2] ?? 0);
+				$sinceId = $this->parsePhpVersion($since->args[0]->value->value);
 				if ($sinceId > $phpVersionFrom) {
 					$oldStmts[] = $stmt;
 					continue;
 				}
 			}
-			$untilId = null;
+
 			if ($until !== null) {
-				$parts = explode('.', $until->args[0]->value->value);
-				$untilId = ((int) $parts[0] * 10000 + (int) ($parts[1] ?? 0) * 100 + (int) ($parts[2] ?? 99)) - 100;
-				if ($untilId < $phpVersionFrom) {
+				$untilId = $this->parsePhpVersion($until->args[0]->value->value);
+				if ($untilId <= $phpVersionFrom) {
 					$oldStmts[] = $stmt;
 					continue;
 				}
@@ -776,11 +771,9 @@ $command = new class(
 			// UPDATE BELONGS HERE
 			PHP;
 
-		$parts = explode('.', $updateTo);
-		$phpVersion = (int) $parts[0] * 10000 + (int) ($parts[1] ?? 0) * 100 + (int) ($parts[2] ?? 0);
 		$updateString = sprintf(
 			$this->indent($template, 2),
-			$phpVersion,
+			$this->parsePhpVersion($updateTo),
 			$this->indent($this->exportArray($classes), 3),
 			$this->indent($this->exportArray($functions), 3),
 		);
@@ -810,6 +803,12 @@ $command = new class(
 	private function indent(string $s, int $level): string
 	{
 		return preg_replace('#\n(?!\n)#', "\n" . str_repeat("\t", $level), $s);
+	}
+
+	private function parsePhpVersion(string $version): int
+	{
+		$parts = array_map('intval', explode('.', $version));
+		return $parts[0] * 10000 + ($parts[1] ?? 0) * 100 + ($parts[2] ?? 0);
 	}
 
 };
